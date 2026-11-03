@@ -243,6 +243,73 @@ class TestFinalizeFormats:
         assert isinstance(parsed, dict)
         assert "config" in parsed
 
+    @pytest.mark.asyncio
+    async def test_finalize_extensionless_path_uses_format_type_json(
+        self, tmp_path: Path, minimal_report: GenerativeBenchmarksReport
+    ):
+        """
+        kind=json with a path that has no .json/.yaml/.yml suffix should still
+        write JSON to that path instead of raising after the run (#1286).
+
+        ## WRITTEN BY AI ##
+        """
+        explicit_path = tmp_path / "results"
+        handler = GenerativeBenchmarkerSerialized(
+            output_path=explicit_path, format_type="json"
+        )
+        result_path = await handler.finalize(minimal_report)
+
+        assert result_path == explicit_path
+        assert result_path.exists()
+        parsed = json.loads(result_path.read_text())
+        assert isinstance(parsed, dict)
+        assert "config" in parsed
+
+    @pytest.mark.asyncio
+    async def test_finalize_extensionless_path_uses_format_type_yaml(
+        self, tmp_path: Path, minimal_report: GenerativeBenchmarksReport
+    ):
+        """
+        kind=yaml with an unrecognized suffix should write YAML to that path.
+
+        ## WRITTEN BY AI ##
+        """
+        explicit_path = tmp_path / "results.out"
+        handler = GenerativeBenchmarkerSerialized(
+            output_path=explicit_path, format_type="yaml"
+        )
+        result_path = await handler.finalize(minimal_report)
+
+        assert result_path == explicit_path
+        content = result_path.read_text()
+        with pytest.raises(json.JSONDecodeError):
+            json.loads(content)
+        parsed = yaml.safe_load(content)
+        assert isinstance(parsed, dict)
+        assert "config" in parsed
+
+    @pytest.mark.asyncio
+    async def test_finalize_nonexistent_dir_path_uses_format_type(
+        self, tmp_path: Path, minimal_report: GenerativeBenchmarksReport
+    ):
+        """
+        A trailing-slash dir that does not exist yet becomes a suffix-less path;
+        use format_type so the run still writes output (#1286).
+
+        ## WRITTEN BY AI ##
+        """
+        # Mimic pathlib dropping a trailing slash on a not-yet-created directory.
+        explicit_path = tmp_path / "new_results"
+        assert not explicit_path.exists()
+        handler = GenerativeBenchmarkerSerialized(
+            output_path=explicit_path, format_type="json"
+        )
+        result_path = await handler.finalize(minimal_report)
+
+        assert result_path == explicit_path
+        assert json.loads(result_path.read_text())["config"]
+
+
 
 @pytest.mark.regression
 def test_report_round_trips_profile_conclusions(minimal_report):

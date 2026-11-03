@@ -75,4 +75,15 @@ class GenerativeBenchmarkerSerialized(GenerativeBenchmarkerOutput):
         output_path = self.output_path
         if output_path.is_dir():
             output_path = output_path / f"benchmarks.{self.format_type}"
-        return report.save_file(output_path)
+            return report.save_file(output_path)
+
+        # Explicit paths without a recognized suffix (e.g. `out`, `results/`)
+        # previously raised after the run finished (#1286). Prefer the path
+        # suffix when it is json/yaml/yml; otherwise use format_type from kind.
+        suffix = output_path.suffix.lower().lstrip(".")
+        type_: Literal["json", "yaml"] | None
+        if suffix in ("json", "yaml", "yml"):
+            type_ = None
+        else:
+            type_ = self.format_type
+        return report.save_file(output_path, type_=type_)
